@@ -7,6 +7,7 @@ const navItems = [
   { href: "/", label: "대시보드" },
   { href: "/sample/charts", label: "차트 샘플" },
   { href: "/sample/grid", label: "그리드 샘플" },
+  { href: "/sample/excel-grid", label: "엑셀 연동 그리드" },
 ];
 
 export default function Sidebar() {

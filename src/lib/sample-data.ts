@@ -72,6 +72,35 @@ export interface Product {
   status: "판매중" | "품절" | "단종";
 }
 
+// 엑셀 연동 그리드 샘플 데이터 (매출 데이터)
+export interface SalesRecord {
+  region: string;
+  product: string;
+  q1: number;
+  q2: number;
+  q3: number;
+  q4: number;
+  total: number;
+}
+
+export const salesData: SalesRecord[] = [
+  { region: "서울", product: "노트북", q1: 1200, q2: 1350, q3: 1500, q4: 1800, total: 5850 },
+  { region: "서울", product: "모니터", q1: 800, q2: 920, q3: 1050, q4: 1200, total: 3970 },
+  { region: "서울", product: "키보드", q1: 450, q2: 500, q3: 620, q4: 780, total: 2350 },
+  { region: "부산", product: "노트북", q1: 680, q2: 720, q3: 850, q4: 1020, total: 3270 },
+  { region: "부산", product: "모니터", q1: 420, q2: 480, q3: 530, q4: 650, total: 2080 },
+  { region: "부산", product: "키보드", q1: 230, q2: 260, q3: 310, q4: 390, total: 1190 },
+  { region: "대구", product: "노트북", q1: 520, q2: 580, q3: 640, q4: 780, total: 2520 },
+  { region: "대구", product: "모니터", q1: 310, q2: 350, q3: 400, q4: 490, total: 1550 },
+  { region: "대구", product: "키보드", q1: 180, q2: 210, q3: 250, q4: 320, total: 960 },
+  { region: "인천", product: "노트북", q1: 480, q2: 530, q3: 610, q4: 720, total: 2340 },
+  { region: "인천", product: "모니터", q1: 290, q2: 330, q3: 380, q4: 460, total: 1460 },
+  { region: "인천", product: "키보드", q1: 160, q2: 190, q3: 230, q4: 290, total: 870 },
+  { region: "광주", product: "노트북", q1: 350, q2: 400, q3: 460, q4: 550, total: 1760 },
+  { region: "광주", product: "모니터", q1: 210, q2: 240, q3: 280, q4: 340, total: 1070 },
+  { region: "광주", product: "키보드", q1: 120, q2: 140, q3: 170, q4: 210, total: 640 },
+];
+
 export const productData: Product[] = [
   { id: 1, name: "무선 블루투스 이어폰", category: "전자제품", price: 89000, stock: 150, rating: 4.5, status: "판매중" },
   { id: 2, name: "스마트 워치 Pro", category: "전자제품", price: 299000, stock: 45, rating: 4.2, status: "판매중" },
