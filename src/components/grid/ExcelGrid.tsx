@@ -5,8 +5,6 @@ import {
   useCallback,
   useRef,
   useEffect,
-  type KeyboardEvent,
-  type ClipboardEvent,
 } from "react";
 
 export interface ExcelColumn {
@@ -43,6 +41,23 @@ function normalizeRange(range: SelectionRange) {
   };
 }
 
+function buildTsv(
+  data: Record<string, string | number>[],
+  columns: ExcelColumn[],
+  range: SelectionRange
+): string {
+  const { minRow, maxRow, minCol, maxCol } = normalizeRange(range);
+  const lines: string[] = [];
+  for (let r = minRow; r <= maxRow; r++) {
+    const cells: string[] = [];
+    for (let c = minCol; c <= maxCol; c++) {
+      cells.push(String(data[r][columns[c].key] ?? ""));
+    }
+    lines.push(cells.join("\t"));
+  }
+  return lines.join("\n");
+}
+
 export default function ExcelGrid({
   data: initialData,
   columns,
@@ -58,20 +73,39 @@ export default function ExcelGrid({
   const [copyFeedback, setCopyFeedback] = useState("");
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const hiddenTextareaRef = useRef<HTMLTextAreaElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
+
+  // Keep hidden textarea focused for clipboard operations
+  const focusHiddenTextarea = useCallback(() => {
+    if (editingCell) return; // don't steal focus from edit input
+    hiddenTextareaRef.current?.focus({ preventScroll: true });
+  }, [editingCell]);
 
   // Sync with external data changes
   useEffect(() => {
     setData(initialData);
   }, [initialData]);
 
-  // Focus input when editing
+  // Focus edit input when editing starts
   useEffect(() => {
     if (editingCell && editInputRef.current) {
       editInputRef.current.focus();
       editInputRef.current.select();
     }
   }, [editingCell]);
+
+  // Pre-fill hidden textarea with TSV whenever selection changes (for copy)
+  useEffect(() => {
+    if (!selection || !hiddenTextareaRef.current || editingCell) return;
+    hiddenTextareaRef.current.value = buildTsv(data, columns, selection);
+    hiddenTextareaRef.current.select();
+  }, [selection, data, columns, editingCell]);
+
+  const showFeedback = useCallback((msg: string) => {
+    setCopyFeedback(msg);
+    setTimeout(() => setCopyFeedback(""), 2000);
+  }, []);
 
   const updateData = useCallback(
     (newData: Record<string, string | number>[]) => {
@@ -81,20 +115,13 @@ export default function ExcelGrid({
     [onChange]
   );
 
-  const isCellSelected = useCallback(
-    (row: number, col: number) => {
-      if (!selection) return false;
-      const { minRow, maxRow, minCol, maxCol } = normalizeRange(selection);
+  const isCellInRange = useCallback(
+    (row: number, col: number, range: SelectionRange | null) => {
+      if (!range) return false;
+      const { minRow, maxRow, minCol, maxCol } = normalizeRange(range);
       return row >= minRow && row <= maxRow && col >= minCol && col <= maxCol;
     },
-    [selection]
-  );
-
-  const isCellActive = useCallback(
-    (row: number, col: number) => {
-      return activeCell?.row === row && activeCell?.col === col;
-    },
-    [activeCell]
+    []
   );
 
   const commitEdit = useCallback(() => {
@@ -110,10 +137,13 @@ export default function ExcelGrid({
     }
     updateData(newData);
     setEditingCell(null);
+    // Restore focus to hidden textarea after edit
+    setTimeout(() => hiddenTextareaRef.current?.focus({ preventScroll: true }), 0);
   }, [editingCell, editValue, columns, data, updateData]);
 
   const cancelEdit = useCallback(() => {
     setEditingCell(null);
+    setTimeout(() => hiddenTextareaRef.current?.focus({ preventScroll: true }), 0);
   }, []);
 
   const startEditing = useCallback(
@@ -135,78 +165,40 @@ export default function ExcelGrid({
       }
       const addr = { row, col };
       if (e.shiftKey && activeCell) {
-        // Extend selection
         setSelection({ start: activeCell, end: addr });
       } else {
         setActiveCell(addr);
         setSelection({ start: addr, end: addr });
       }
       setIsDragging(true);
+      // Focus hidden textarea so keyboard events work
+      setTimeout(() => hiddenTextareaRef.current?.focus({ preventScroll: true }), 0);
     },
     [activeCell, editingCell, commitEdit]
   );
 
   const handleCellMouseEnter = useCallback(
     (row: number, col: number) => {
-      if (!isDragging || !selection) return;
+      if (!isDragging) return;
       setSelection((prev) =>
         prev ? { start: prev.start, end: { row, col } } : null
       );
     },
-    [isDragging, selection]
+    [isDragging]
   );
 
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
+  useEffect(() => {
+    const onMouseUp = () => setIsDragging(false);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => window.removeEventListener("mouseup", onMouseUp);
   }, []);
 
-  useEffect(() => {
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => window.removeEventListener("mouseup", handleMouseUp);
-  }, [handleMouseUp]);
-
-  // --- Copy: selected cells → TSV clipboard ---
-  const copySelectionToClipboard = useCallback(async () => {
-    if (!selection) return;
-    const { minRow, maxRow, minCol, maxCol } = normalizeRange(selection);
-    const lines: string[] = [];
-    for (let r = minRow; r <= maxRow; r++) {
-      const cells: string[] = [];
-      for (let c = minCol; c <= maxCol; c++) {
-        cells.push(String(data[r][columns[c].key] ?? ""));
-      }
-      lines.push(cells.join("\t"));
-    }
-    const tsv = lines.join("\n");
-    try {
-      await navigator.clipboard.writeText(tsv);
-      const rowCount = maxRow - minRow + 1;
-      const colCount = maxCol - minCol + 1;
-      setCopyFeedback(`${rowCount}행 × ${colCount}열 복사됨`);
-      setTimeout(() => setCopyFeedback(""), 2000);
-    } catch {
-      // Fallback
-      const textarea = document.createElement("textarea");
-      textarea.value = tsv;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-    }
-  }, [selection, data, columns]);
-
-  // --- Paste: TSV clipboard → grid starting from active cell ---
-  const pasteFromClipboard = useCallback(
-    async (clipboardText?: string) => {
-      if (!activeCell) return;
-      let text = clipboardText;
-      if (!text) {
-        try {
-          text = await navigator.clipboard.readText();
-        } catch {
-          return;
-        }
-      }
+  // --- Paste: from hidden textarea's paste event ---
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (editingCell || !activeCell) return;
+      e.preventDefault();
+      const text = e.clipboardData.getData("text/plain");
       if (!text) return;
 
       const rows = text.split(/\r?\n/).filter((line) => line.length > 0);
@@ -226,7 +218,7 @@ export default function ExcelGrid({
           const col = columns[targetCol];
           if (col.editable === false) continue;
           if (col.type === "number") {
-            const num = Number(cells[c]);
+            const num = Number(cells[c].replace(/,/g, ""));
             newData[targetRow][col.key] = isNaN(num) ? 0 : num;
           } else {
             newData[targetRow][col.key] = cells[c];
@@ -236,8 +228,6 @@ export default function ExcelGrid({
       }
 
       updateData(newData);
-
-      // Highlight pasted range
       setSelection({
         start: activeCell,
         end: {
@@ -245,31 +235,32 @@ export default function ExcelGrid({
           col: Math.min(activeCell.col + pastedCols - 1, columns.length - 1),
         },
       });
-      setCopyFeedback(`${pastedRows}행 × ${pastedCols}열 붙여넣기 완료`);
-      setTimeout(() => setCopyFeedback(""), 2000);
+      showFeedback(`${pastedRows}행 × ${pastedCols}열 붙여넣기 완료`);
     },
-    [activeCell, data, columns, updateData]
+    [activeCell, editingCell, data, columns, updateData, showFeedback]
   );
 
-  // --- Keyboard handler ---
+  // --- Copy: native copy from hidden textarea (pre-filled with TSV) ---
+  const handleCopy = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (!selection) return;
+      e.preventDefault();
+      const tsv = buildTsv(data, columns, selection);
+      e.clipboardData.setData("text/plain", tsv);
+
+      const { minRow, maxRow, minCol, maxCol } = normalizeRange(selection);
+      showFeedback(`${maxRow - minRow + 1}행 × ${maxCol - minCol + 1}열 복사됨`);
+    },
+    [selection, data, columns, showFeedback]
+  );
+
+  // --- Keyboard handler on hidden textarea ---
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      // Ctrl+C / Cmd+C
-      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
-        e.preventDefault();
-        copySelectionToClipboard();
-        return;
-      }
-
-      // Ctrl+V / Cmd+V (handled in onPaste for content)
-      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
-        // Let the native paste event handle it
-        return;
-      }
-
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // Ctrl+A: Select all
       if ((e.ctrlKey || e.metaKey) && e.key === "a") {
         e.preventDefault();
+        setActiveCell({ row: 0, col: 0 });
         setSelection({
           start: { row: 0, col: 0 },
           end: { row: data.length - 1, col: columns.length - 1 },
@@ -277,28 +268,8 @@ export default function ExcelGrid({
         return;
       }
 
-      if (editingCell) {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          commitEdit();
-          // Move down
-          if (editingCell.row < data.length - 1) {
-            const next = { row: editingCell.row + 1, col: editingCell.col };
-            setActiveCell(next);
-            setSelection({ start: next, end: next });
-          }
-        } else if (e.key === "Escape") {
-          cancelEdit();
-        } else if (e.key === "Tab") {
-          e.preventDefault();
-          commitEdit();
-          const nextCol = e.shiftKey ? editingCell.col - 1 : editingCell.col + 1;
-          if (nextCol >= 0 && nextCol < columns.length) {
-            const next = { row: editingCell.row, col: nextCol };
-            setActiveCell(next);
-            setSelection({ start: next, end: next });
-          }
-        }
+      // Let Ctrl+C and Ctrl+V be handled by native copy/paste events
+      if ((e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "v")) {
         return;
       }
 
@@ -331,6 +302,7 @@ export default function ExcelGrid({
           move(0, 1);
           break;
         case "Tab":
+          e.preventDefault();
           move(0, e.shiftKey ? -1 : 1);
           break;
         case "Enter":
@@ -358,9 +330,14 @@ export default function ExcelGrid({
             updateData(newData);
           }
           break;
+        case "Escape":
+          setSelection(null);
+          setActiveCell(null);
+          break;
         default:
           // Start editing on printable character
           if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
             const col = columns[activeCell.col];
             if (col.editable !== false) {
               setEditingCell(activeCell);
@@ -369,35 +346,42 @@ export default function ExcelGrid({
           }
       }
     },
-    [
-      activeCell,
-      editingCell,
-      selection,
-      data,
-      columns,
-      copySelectionToClipboard,
-      commitEdit,
-      cancelEdit,
-      startEditing,
-      updateData,
-    ]
+    [activeCell, selection, data, columns, startEditing, updateData]
   );
 
-  // Native paste handler
-  const handlePaste = useCallback(
-    (e: ClipboardEvent) => {
-      if (editingCell) return; // Let native input handle it
-      e.preventDefault();
-      const text = e.clipboardData.getData("text/plain");
-      pasteFromClipboard(text);
+  // --- Edit input keyboard handler ---
+  const handleEditKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!editingCell) return;
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commitEdit();
+        if (editingCell.row < data.length - 1) {
+          const next = { row: editingCell.row + 1, col: editingCell.col };
+          setActiveCell(next);
+          setSelection({ start: next, end: next });
+        }
+      } else if (e.key === "Escape") {
+        cancelEdit();
+      } else if (e.key === "Tab") {
+        e.preventDefault();
+        commitEdit();
+        const nextCol = e.shiftKey ? editingCell.col - 1 : editingCell.col + 1;
+        if (nextCol >= 0 && nextCol < columns.length) {
+          const next = { row: editingCell.row, col: nextCol };
+          setActiveCell(next);
+          setSelection({ start: next, end: next });
+        }
+      }
     },
-    [editingCell, pasteFromClipboard]
+    [editingCell, data.length, columns.length, commitEdit, cancelEdit]
   );
 
   const getCellClasses = (row: number, col: number) => {
-    const isSelected = isCellSelected(row, col);
-    const isActive = isCellActive(row, col);
-    const base = "px-3 py-2 text-sm border-r border-b border-gray-200 relative";
+    const isSelected = isCellInRange(row, col, selection);
+    const isActive = activeCell?.row === row && activeCell?.col === col;
+    const base =
+      "px-3 py-2 text-sm border-r border-b border-gray-200 relative cursor-cell";
 
     if (isActive) {
       return `${base} outline-2 outline-blue-500 outline -outline-offset-1 bg-white z-10`;
@@ -405,47 +389,26 @@ export default function ExcelGrid({
     if (isSelected) {
       return `${base} bg-blue-50`;
     }
-    return `${base} bg-white`;
+    return `${base} bg-white hover:bg-gray-50`;
   };
-
-  // Selection overlay border
-  const getSelectionBorder = () => {
-    if (!selection) return null;
-    const { minRow, maxRow, minCol, maxCol } = normalizeRange(selection);
-    const table = containerRef.current?.querySelector("table");
-    if (!table) return null;
-    const tbody = table.querySelector("tbody");
-    if (!tbody) return null;
-
-    const rows = tbody.querySelectorAll("tr");
-    if (rows.length === 0) return null;
-
-    const firstCell = rows[minRow]?.querySelectorAll("td")[minCol];
-    const lastCell = rows[maxRow]?.querySelectorAll("td")[maxCol];
-    if (!firstCell || !lastCell) return null;
-
-    const tableRect = table.getBoundingClientRect();
-    const firstRect = firstCell.getBoundingClientRect();
-    const lastRect = lastCell.getBoundingClientRect();
-
-    return {
-      top: firstRect.top - tableRect.top,
-      left: firstRect.left - tableRect.left,
-      width: lastRect.right - firstRect.left,
-      height: lastRect.bottom - firstRect.top,
-    };
-  };
-
-  const selectionBorder = getSelectionBorder();
 
   return (
     <div
-      className="rounded-xl border border-gray-200 bg-white shadow-sm focus:outline-none"
+      className="rounded-xl border border-gray-200 bg-white shadow-sm relative"
       ref={containerRef}
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-      onPaste={handlePaste}
+      onClick={focusHiddenTextarea}
     >
+      {/* Hidden textarea for clipboard operations */}
+      <textarea
+        ref={hiddenTextareaRef}
+        className="fixed -top-[9999px] -left-[9999px] w-px h-px opacity-0"
+        tabIndex={-1}
+        aria-hidden="true"
+        onKeyDown={handleKeyDown}
+        onCopy={handleCopy}
+        onPaste={handlePaste}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
         <div className="flex items-center gap-4">
@@ -462,7 +425,7 @@ export default function ExcelGrid({
           </div>
         </div>
         {copyFeedback && (
-          <div className="animate-pulse rounded-lg bg-blue-50 px-3 py-1.5 text-sm text-blue-600">
+          <div className="rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-600 animate-pulse">
             {copyFeedback}
           </div>
         )}
@@ -471,7 +434,7 @@ export default function ExcelGrid({
       {/* Grid */}
       <div className="overflow-auto">
         <table
-          className="w-full border-collapse select-none"
+          className="w-full border-collapse"
           style={{ tableLayout: "fixed" }}
         >
           <colgroup>
@@ -491,13 +454,18 @@ export default function ExcelGrid({
                   className="border-r border-b border-gray-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 sticky top-0 bg-gray-50 z-20"
                 >
                   {col.header}
+                  {col.editable === false && (
+                    <span className="ml-1 text-[10px] font-normal text-gray-400">
+                      (자동)
+                    </span>
+                  )}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {data.map((row, rowIdx) => (
-              <tr key={rowIdx} className="group">
+              <tr key={rowIdx}>
                 {/* Row number */}
                 <td className="border-r border-b border-gray-200 bg-gray-50 px-2 py-2 text-center text-xs text-gray-400 select-none">
                   {rowIdx + 1}
@@ -521,10 +489,11 @@ export default function ExcelGrid({
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
                           onBlur={commitEdit}
+                          onKeyDown={handleEditKeyDown}
                           className="absolute inset-0 w-full h-full px-3 py-2 text-sm border-2 border-blue-500 outline-none bg-white z-30"
                         />
                       ) : (
-                        <span className="block truncate">
+                        <span className="block truncate select-none">
                           {col.type === "number"
                             ? Number(row[col.key]).toLocaleString()
                             : String(row[col.key] ?? "")}
@@ -537,42 +506,32 @@ export default function ExcelGrid({
             ))}
           </tbody>
         </table>
-
-        {/* Selection border overlay */}
-        {selectionBorder && selection && (() => {
-          const { minRow, maxRow, minCol, maxCol } = normalizeRange(selection);
-          const isMulti = minRow !== maxRow || minCol !== maxCol;
-          if (!isMulti) return null;
-          return (
-            <div
-              className="pointer-events-none absolute border-2 border-blue-500"
-              style={{
-                top: selectionBorder.top,
-                left: selectionBorder.left,
-                width: selectionBorder.width,
-                height: selectionBorder.height,
-              }}
-            />
-          );
-        })()}
       </div>
 
       {/* Footer */}
       <div className="flex items-center justify-between border-t border-gray-200 px-6 py-3 text-sm text-gray-500">
-        <span>총 {data.length}행 × {columns.length}열</span>
-        {selection && (() => {
-          const { minRow, maxRow, minCol, maxCol } = normalizeRange(selection);
-          const selectedRows = maxRow - minRow + 1;
-          const selectedCols = maxCol - minCol + 1;
-          if (selectedRows === 1 && selectedCols === 1) {
-            return <span>셀: {columns[minCol].header} ({minRow + 1}행)</span>;
-          }
-          return (
-            <span>
-              선택: {selectedRows}행 × {selectedCols}열 ({selectedRows * selectedCols}셀)
-            </span>
-          );
-        })()}
+        <span>
+          총 {data.length}행 × {columns.length}열
+        </span>
+        {selection &&
+          (() => {
+            const { minRow, maxRow, minCol, maxCol } = normalizeRange(selection);
+            const selectedRows = maxRow - minRow + 1;
+            const selectedCols = maxCol - minCol + 1;
+            if (selectedRows === 1 && selectedCols === 1) {
+              return (
+                <span>
+                  셀: {columns[minCol].header} ({minRow + 1}행)
+                </span>
+              );
+            }
+            return (
+              <span>
+                선택: {selectedRows}행 × {selectedCols}열 (
+                {selectedRows * selectedCols}셀)
+              </span>
+            );
+          })()}
       </div>
     </div>
   );
