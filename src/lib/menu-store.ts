@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { MenuConfig, LayoutItem } from "./types";
+import type { MenuConfig, LayoutItem, MenuType } from "./types";
 
 const STORAGE_KEY = "web-solution-menus";
 
@@ -17,7 +17,14 @@ export function loadMenusLocal(): MenuConfig[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const menus: MenuConfig[] = raw ? JSON.parse(raw) : [];
+    // 기존 데이터 호환: 새 필드 기본값 보충
+    return menus.map((m) => ({
+      ...m,
+      menuType: m.menuType || "menu",
+      parentId: m.parentId ?? null,
+      released: m.released ?? false,
+    }));
   } catch {
     return [];
   }
@@ -31,13 +38,23 @@ export function getMenuLocal(id: string): MenuConfig | undefined {
   return loadMenusLocal().find((m) => m.id === id);
 }
 
-export function createMenuLocal(name: string, description: string): MenuConfig {
+export interface CreateMenuParams {
+  name: string;
+  description: string;
+  menuType?: MenuType;
+  parentId?: string | null;
+}
+
+export function createMenuLocal(params: CreateMenuParams): MenuConfig {
   const menus = loadMenusLocal();
   const menu: MenuConfig = {
     id: generateId(),
-    name,
-    description,
+    name: params.name,
+    description: params.description,
     order: menus.length,
+    menuType: params.menuType || "menu",
+    parentId: params.parentId || null,
+    released: false,
     layout: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -49,7 +66,7 @@ export function createMenuLocal(name: string, description: string): MenuConfig {
 
 export function updateMenuLocal(
   id: string,
-  updates: Partial<Pick<MenuConfig, "name" | "description" | "order">>,
+  updates: Partial<Pick<MenuConfig, "name" | "description" | "order" | "menuType" | "parentId" | "released">>,
 ): MenuConfig | undefined {
   const menus = loadMenusLocal();
   const idx = menus.findIndex((m) => m.id === id);
@@ -101,12 +118,12 @@ export async function getMenuApi(id: string): Promise<MenuConfig | null> {
   }
 }
 
-export async function createMenuApi(name: string, description: string): Promise<boolean> {
+export async function createMenuApi(params: CreateMenuParams): Promise<boolean> {
   try {
     const res = await fetch("/api/menus", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify(params),
     });
     return res.ok;
   } catch {
@@ -116,7 +133,7 @@ export async function createMenuApi(name: string, description: string): Promise<
 
 export async function updateMenuApi(
   id: string,
-  updates: Partial<Pick<MenuConfig, "name" | "description" | "order">>,
+  updates: Partial<Pick<MenuConfig, "name" | "description" | "order" | "menuType" | "parentId" | "released">>,
 ): Promise<boolean> {
   try {
     const res = await fetch(`/api/menus/${id}`, {
@@ -168,17 +185,17 @@ export async function getMenu(id: string): Promise<MenuConfig | null> {
   return getMenuLocal(id) || null;
 }
 
-export async function createMenu(name: string, description: string): Promise<boolean> {
-  const ok = await createMenuApi(name, description);
+export async function createMenu(params: CreateMenuParams): Promise<boolean> {
+  const ok = await createMenuApi(params);
   if (!ok) {
-    createMenuLocal(name, description);
+    createMenuLocal(params);
   }
   return true;
 }
 
 export async function updateMenu(
   id: string,
-  updates: Partial<Pick<MenuConfig, "name" | "description" | "order">>,
+  updates: Partial<Pick<MenuConfig, "name" | "description" | "order" | "menuType" | "parentId" | "released">>,
 ): Promise<boolean> {
   const ok = await updateMenuApi(id, updates);
   if (!ok) {

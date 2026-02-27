@@ -7,6 +7,9 @@ interface MenuRow {
   NAME: string;
   DESCRIPTION: string;
   ORDER_NUM: number;
+  MENU_TYPE: string;
+  PARENT_ID: number | null;
+  IS_RELEASED: number;
   LAYOUT_JSON: string | null;
   CREATED_AT: string;
   UPDATED_AT: string;
@@ -22,7 +25,9 @@ export async function GET(
     const { id } = await params;
 
     const rows = await query<MenuRow>(
-      "SELECT ID, NAME, DESCRIPTION, ORDER_NUM, LAYOUT_JSON, CREATED_AT, UPDATED_AT FROM MENUS WHERE ID = :id",
+      `SELECT ID, NAME, DESCRIPTION, ORDER_NUM, MENU_TYPE, PARENT_ID, IS_RELEASED,
+              LAYOUT_JSON, CREATED_AT, UPDATED_AT
+       FROM MENUS WHERE ID = :id`,
       { id: Number(id) },
     );
 
@@ -32,10 +37,13 @@ export async function GET(
 
     const row = rows[0];
     return NextResponse.json({
-      id: row.ID,
+      id: String(row.ID),
       name: row.NAME,
       description: row.DESCRIPTION || "",
       order: row.ORDER_NUM,
+      menuType: row.MENU_TYPE || "menu",
+      parentId: row.PARENT_ID ? String(row.PARENT_ID) : null,
+      released: row.IS_RELEASED === 1,
       layout: row.LAYOUT_JSON ? JSON.parse(row.LAYOUT_JSON) : [],
       createdAt: row.CREATED_AT,
       updatedAt: row.UPDATED_AT,
@@ -57,16 +65,31 @@ export async function PUT(
   try {
     await requireAuth();
     const { id } = await params;
-    const { name, description, order } = await request.json();
+    const body = await request.json();
+
+    // released 토글 전용
+    if (body.released !== undefined && Object.keys(body).length === 1) {
+      await execute(
+        `UPDATE MENUS SET IS_RELEASED = :released, UPDATED_AT = SYSTIMESTAMP WHERE ID = :id`,
+        { released: body.released ? 1 : 0, id: Number(id) },
+      );
+      return NextResponse.json({ message: "릴리즈 상태가 변경되었습니다." });
+    }
+
+    const { name, description, order, menuType, parentId } = body;
 
     await execute(
       `UPDATE MENUS
-       SET NAME = :name, DESCRIPTION = :description, ORDER_NUM = :orderNum, UPDATED_AT = SYSTIMESTAMP
+       SET NAME = :name, DESCRIPTION = :description, ORDER_NUM = :orderNum,
+           MENU_TYPE = :menuType, PARENT_ID = :parentId,
+           UPDATED_AT = SYSTIMESTAMP
        WHERE ID = :id`,
       {
         name,
         description: description || "",
         orderNum: order ?? 0,
+        menuType: menuType || "menu",
+        parentId: parentId ? Number(parentId) : null,
         id: Number(id),
       },
     );
