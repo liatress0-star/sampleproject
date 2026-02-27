@@ -11,7 +11,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [menus, setMenus] = useState<MenuConfig[]>([]);
 
   const refresh = useCallback(() => {
-    setMenus(loadMenus());
+    loadMenus().then(setMenus);
   }, []);
 
   useEffect(() => {

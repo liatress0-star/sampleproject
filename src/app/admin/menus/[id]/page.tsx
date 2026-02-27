@@ -21,16 +21,17 @@ export default function MenuLayoutPage() {
   const [, setDraggingComponent] = useState<ComponentInfo | null>(null);
 
   useEffect(() => {
-    const m = getMenu(menuId);
-    if (m) {
-      setMenu(m);
-      setLayoutItems(m.layout);
-    }
+    getMenu(menuId).then((m) => {
+      if (m) {
+        setMenu(m);
+        setLayoutItems(m.layout);
+      }
+    });
   }, [menuId]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!menuId) return;
-    saveLayout(menuId, layoutItems);
+    await saveLayout(menuId, layoutItems);
     refresh();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);

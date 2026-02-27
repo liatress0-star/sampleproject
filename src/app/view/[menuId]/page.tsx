@@ -14,9 +14,10 @@ export default function ViewPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const m = getMenu(menuId);
-    setMenu(m || null);
-    setLoading(false);
+    getMenu(menuId).then((m) => {
+      setMenu(m || null);
+      setLoading(false);
+    });
   }, [menuId]);
 
   if (loading) {

@@ -24,14 +24,14 @@ export default function MenuListPage() {
     setShowForm(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
     if (editingMenu) {
-      updateMenu(editingMenu.id, { name: name.trim(), description: description.trim() });
+      await updateMenu(editingMenu.id, { name: name.trim(), description: description.trim() });
     } else {
-      createMenu(name.trim(), description.trim());
+      await createMenu(name.trim(), description.trim());
     }
     refresh();
     resetForm();
@@ -44,9 +44,9 @@ export default function MenuListPage() {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string, menuName: string) => {
+  const handleDelete = async (id: string, menuName: string) => {
     if (!confirm(`"${menuName}" 메뉴를 삭제하시겠습니까?`)) return;
-    deleteMenu(id);
+    await deleteMenu(id);
     refresh();
   };
 
