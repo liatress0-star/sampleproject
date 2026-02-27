@@ -37,6 +37,14 @@ export default function Sidebar() {
           );
         })}
       </nav>
+      <div className="border-t border-gray-200 px-3 py-4">
+        <Link
+          href="/admin"
+          className="block rounded-lg px-4 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+        >
+          관리자 &rarr;
+        </Link>
+      </div>
     </aside>
   );
 }
