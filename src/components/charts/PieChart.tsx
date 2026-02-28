@@ -21,6 +21,7 @@ interface PieChartProps {
   height?: number;
   innerRadius?: number;
   outerRadius?: number;
+  showLegend?: boolean;
 }
 
 export default function PieChart({
@@ -29,6 +30,7 @@ export default function PieChart({
   height = 400,
   innerRadius = 0,
   outerRadius = 140,
+  showLegend = true,
 }: PieChartProps) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -60,7 +62,7 @@ export default function PieChart({
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
             }}
           />
-          <Legend />
+          {showLegend && <Legend />}
         </RechartsPieChart>
       </ResponsiveContainer>
     </div>

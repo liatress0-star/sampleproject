@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getMenu, saveLayout, useMenus } from "@/lib/menu-store";
-import type { MenuConfig, LayoutItem, ComponentInfo } from "@/lib/types";
+import type { MenuConfig, LayoutItem } from "@/lib/types";
 import ComponentPalette from "@/components/admin/ComponentPalette";
 import LayoutCanvas from "@/components/admin/LayoutCanvas";
+import PropertiesPanel from "@/components/admin/PropertiesPanel";
 
 export default function MenuLayoutPage() {
   const params = useParams();
@@ -18,7 +19,7 @@ export default function MenuLayoutPage() {
   const [layoutItems, setLayoutItems] = useState<LayoutItem[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const [, setDraggingComponent] = useState<ComponentInfo | null>(null);
+  const [, setDraggingComponent] = useState<import("@/lib/types").ComponentInfo | null>(null);
 
   useEffect(() => {
     getMenu(menuId).then((m) => {
@@ -42,17 +43,31 @@ export default function MenuLayoutPage() {
     setSaved(false);
   }, []);
 
-  // Update selected item title
-  const handleTitleChange = useCallback(
-    (title: string) => {
-      if (!selectedItemId) return;
+  // 속성 패널에서 아이템 업데이트
+  const handleItemUpdate = useCallback(
+    (id: string, updates: Partial<LayoutItem>) => {
       setLayoutItems((prev) =>
-        prev.map((item) =>
-          item.id === selectedItemId ? { ...item, title } : item
-        )
+        prev.map((item) => {
+          if (item.id !== id) return item;
+          // props 업데이트 시 기존 props와 병합
+          if (updates.props) {
+            return { ...item, ...updates, props: { ...item.props, ...updates.props } };
+          }
+          return { ...item, ...updates };
+        })
       );
+      setSaved(false);
     },
-    [selectedItemId]
+    []
+  );
+
+  const handleDeleteItem = useCallback(
+    (id: string) => {
+      setLayoutItems((prev) => prev.filter((i) => i.id !== id));
+      setSelectedItemId(null);
+      setSaved(false);
+    },
+    []
   );
 
   if (!menu) {
@@ -127,95 +142,13 @@ export default function MenuLayoutPage() {
         />
 
         {/* Right: Properties panel */}
-        <div className="w-56 flex-shrink-0 overflow-y-auto rounded-xl border border-gray-200 bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold text-gray-700">속성</h3>
-          {selectedItem ? (
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">
-                  제목
-                </label>
-                <input
-                  type="text"
-                  value={selectedItem.title}
-                  onChange={(e) => handleTitleChange(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">
-                  컴포넌트 타입
-                </label>
-                <div className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-sm text-gray-600">
-                  {selectedItem.componentType}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-500">X</label>
-                  <div className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-sm text-gray-600">
-                    {selectedItem.x}
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-500">Y</label>
-                  <div className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-sm text-gray-600">
-                    {selectedItem.y}
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-500">가로</label>
-                  <div className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-sm text-gray-600">
-                    {selectedItem.width}
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-500">세로</label>
-                  <div className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-sm text-gray-600">
-                    {selectedItem.height}
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  handleLayoutChange(layoutItems.filter((i) => i.id !== selectedItemId));
-                  setSelectedItemId(null);
-                }}
-                className="w-full rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
-              >
-                이 컴포넌트 삭제
-              </button>
-            </div>
-          ) : (
-            <p className="text-xs text-gray-400">
-              캔버스에서 컴포넌트를 선택하면 속성을 편집할 수 있습니다.
-            </p>
-          )}
-
-          {/* Layout summary */}
-          <div className="mt-6 border-t border-gray-200 pt-4">
-            <h4 className="mb-2 text-xs font-semibold text-gray-500">배치된 컴포넌트</h4>
-            {layoutItems.length === 0 ? (
-              <p className="text-xs text-gray-400">없음</p>
-            ) : (
-              <ul className="space-y-1">
-                {layoutItems.map((item) => (
-                  <li
-                    key={item.id}
-                    className={`cursor-pointer rounded px-2 py-1 text-xs transition-colors ${
-                      item.id === selectedItemId
-                        ? "bg-blue-100 text-blue-700"
-                        : "text-gray-500 hover:bg-gray-100"
-                    }`}
-                    onClick={() => setSelectedItemId(item.id)}
-                  >
-                    {item.title} ({item.width}×{item.height})
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+        <PropertiesPanel
+          item={selectedItem}
+          allItems={layoutItems}
+          onUpdate={handleItemUpdate}
+          onDelete={handleDeleteItem}
+          onSelect={setSelectedItemId}
+        />
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ import {
   updateMenu,
 } from "@/lib/menu-store";
 import type { MenuConfig, MenuType } from "@/lib/types";
-import { buildMenuTree } from "@/lib/types";
+import { buildMenuTree, SAMPLE_PAGES } from "@/lib/types";
 
 export default function MenuListPage() {
   const { menus, refresh } = useMenus();
@@ -225,6 +225,39 @@ export default function MenuListPage() {
           </div>
         </form>
       )}
+
+      {/* 기본 제공 샘플 페이지 */}
+      <div className="mt-6">
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700">
+          <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">
+            기본 제공
+          </span>
+          샘플 페이지
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          {SAMPLE_PAGES.map((page) => (
+            <div
+              key={page.id}
+              className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{page.icon}</span>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">{page.name}</h4>
+                  <p className="text-xs text-gray-500">{page.description}</p>
+                </div>
+              </div>
+              <Link
+                href={page.href}
+                className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100"
+                target="_blank"
+              >
+                열기
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* 메뉴 트리 목록 */}
       <div className="mt-6 space-y-2">

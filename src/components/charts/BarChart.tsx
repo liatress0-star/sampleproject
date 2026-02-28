@@ -23,6 +23,8 @@ interface BarChartProps {
   series: BarChartSeries[];
   title?: string;
   height?: number;
+  showLegend?: boolean;
+  showGrid?: boolean;
 }
 
 export default function BarChart({
@@ -31,6 +33,8 @@ export default function BarChart({
   series,
   title,
   height = 400,
+  showLegend = true,
+  showGrid = true,
 }: BarChartProps) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -39,7 +43,7 @@ export default function BarChart({
       )}
       <ResponsiveContainer width="100%" height={height}>
         <RechartsBarChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />}
           <XAxis dataKey={xAxisKey} tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} />
           <Tooltip
@@ -49,7 +53,7 @@ export default function BarChart({
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
             }}
           />
-          <Legend />
+          {showLegend && <Legend />}
           {series.map((s) => (
             <Bar
               key={s.dataKey}

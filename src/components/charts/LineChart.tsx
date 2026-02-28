@@ -24,6 +24,8 @@ interface LineChartProps {
   series: LineChartSeries[];
   title?: string;
   height?: number;
+  showLegend?: boolean;
+  showGrid?: boolean;
 }
 
 export default function LineChart({
@@ -32,6 +34,8 @@ export default function LineChart({
   series,
   title,
   height = 400,
+  showLegend = true,
+  showGrid = true,
 }: LineChartProps) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -40,7 +44,7 @@ export default function LineChart({
       )}
       <ResponsiveContainer width="100%" height={height}>
         <RechartsLineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />}
           <XAxis dataKey={xAxisKey} tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} />
           <Tooltip
@@ -50,7 +54,7 @@ export default function LineChart({
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
             }}
           />
-          <Legend />
+          {showLegend && <Legend />}
           {series.map((s) => (
             <Line
               key={s.dataKey}
