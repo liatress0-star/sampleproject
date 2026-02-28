@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { LayoutItem, FilterItemConfig } from "@/lib/types";
-import { DATA_SOURCES } from "@/lib/types";
+import { loadDataSources } from "@/lib/datasource-store";
+import type { DataSourceConfig } from "@/lib/types";
 import { BarChart, LineChart, PieChart, AreaChart } from "@/components/charts";
 import { DataGrid, ExcelGrid, type ExcelColumn } from "@/components/grid";
 import {
@@ -253,7 +254,7 @@ function renderComponent(item: LayoutItem, height: number) {
 
     case "bar-chart": {
       const data = getChartData(p.dataSource as string | undefined);
-      const ds = DATA_SOURCES.find((d) => d.id === p.dataSource);
+      const ds = loadDataSources().find((d: DataSourceConfig) => d.id === p.dataSource);
       const series = (p.series as { dataKey: string; name: string; color: string }[]) ||
         (ds
           ? ds.valueKeys.slice(0, 2).map((vk, i) => ({
@@ -283,7 +284,7 @@ function renderComponent(item: LayoutItem, height: number) {
 
     case "line-chart": {
       const data = getChartData(p.dataSource as string | undefined);
-      const ds = DATA_SOURCES.find((d) => d.id === p.dataSource);
+      const ds = loadDataSources().find((d: DataSourceConfig) => d.id === p.dataSource);
       const series = (p.series as { dataKey: string; name: string; color: string }[]) ||
         (ds
           ? ds.valueKeys.slice(0, 2).map((vk, i) => ({
@@ -334,7 +335,7 @@ function renderComponent(item: LayoutItem, height: number) {
 
     case "area-chart": {
       const data = getChartData(p.dataSource as string | undefined);
-      const ds = DATA_SOURCES.find((d) => d.id === p.dataSource);
+      const ds = loadDataSources().find((d: DataSourceConfig) => d.id === p.dataSource);
       const series = (p.series as { dataKey: string; name: string; color: string }[]) ||
         (ds
           ? ds.valueKeys.slice(0, 2).map((vk, i) => ({

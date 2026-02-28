@@ -7,7 +7,8 @@ import type {
   FilterItemConfig,
   FilterItemType,
 } from "@/lib/types";
-import { DATA_SOURCES } from "@/lib/types";
+import { useDataSources } from "@/lib/datasource-store";
+import type { DataSourceConfig } from "@/lib/types";
 
 interface PropertiesPanelProps {
   item: LayoutItem | undefined;
@@ -33,6 +34,7 @@ export default function PropertiesPanel({
   onDelete,
   onSelect,
 }: PropertiesPanelProps) {
+  const { dataSources: DATA_SOURCES } = useDataSources();
   const props = (item?.props || {}) as Record<string, unknown>;
 
   const updateProp = useCallback(
@@ -234,7 +236,7 @@ export default function PropertiesPanel({
                 <option value="">기본 데이터</option>
                 {compatibleSources.map((ds) => (
                   <option key={ds.id} value={ds.id}>
-                    {ds.label}
+                    {ds.name}
                   </option>
                 ))}
               </select>

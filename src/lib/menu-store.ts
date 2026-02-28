@@ -10,6 +10,90 @@ function generateId(): string {
 }
 
 // ============================================================
+// 샘플 페이지 시드 데이터
+// ============================================================
+
+const SAMPLE_FOLDER_ID = "__sample_folder__";
+
+const SAMPLE_MENU_SEEDS: Omit<MenuConfig, "order" | "createdAt" | "updatedAt">[] = [
+  {
+    id: SAMPLE_FOLDER_ID,
+    name: "샘플 페이지",
+    description: "기본 제공 데모 페이지",
+    menuType: "folder",
+    parentId: null,
+    released: true,
+    layout: [],
+  },
+  {
+    id: "__sample_dashboard__",
+    name: "대시보드",
+    description: "메인 대시보드 화면",
+    menuType: "menu",
+    parentId: SAMPLE_FOLDER_ID,
+    released: true,
+    layout: [],
+    href: "/",
+  },
+  {
+    id: "__sample_charts__",
+    name: "차트 샘플",
+    description: "다양한 차트 컴포넌트 데모",
+    menuType: "menu",
+    parentId: SAMPLE_FOLDER_ID,
+    released: true,
+    layout: [],
+    href: "/sample/charts",
+  },
+  {
+    id: "__sample_grid__",
+    name: "그리드 샘플",
+    description: "데이터 그리드 컴포넌트 데모",
+    menuType: "menu",
+    parentId: SAMPLE_FOLDER_ID,
+    released: true,
+    layout: [],
+    href: "/sample/grid",
+  },
+  {
+    id: "__sample_excel__",
+    name: "엑셀 연동 그리드",
+    description: "엑셀 복사/붙여넣기 지원 그리드",
+    menuType: "menu",
+    parentId: SAMPLE_FOLDER_ID,
+    released: true,
+    layout: [],
+    href: "/sample/excel-grid",
+  },
+];
+
+/** 샘플 페이지 메뉴가 없으면 자동 시드 */
+export function seedSampleMenus() {
+  if (typeof window === "undefined") return;
+  const existing = loadMenusLocal();
+  const existingIds = new Set(existing.map((m) => m.id));
+  const now = new Date().toISOString();
+  let added = false;
+
+  for (let i = 0; i < SAMPLE_MENU_SEEDS.length; i++) {
+    const seed = SAMPLE_MENU_SEEDS[i];
+    if (!existingIds.has(seed.id)) {
+      existing.push({
+        ...seed,
+        order: i,
+        createdAt: now,
+        updatedAt: now,
+      });
+      added = true;
+    }
+  }
+
+  if (added) {
+    saveMenusLocal(existing);
+  }
+}
+
+// ============================================================
 // localStorage 기반 (오프라인/DB 미연결 시 폴백)
 // ============================================================
 
@@ -18,12 +102,12 @@ export function loadMenusLocal(): MenuConfig[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const menus: MenuConfig[] = raw ? JSON.parse(raw) : [];
-    // 기존 데이터 호환: 새 필드 기본값 보충
     return menus.map((m) => ({
       ...m,
       menuType: m.menuType || "menu",
       parentId: m.parentId ?? null,
       released: m.released ?? false,
+      href: m.href ?? undefined,
     }));
   } catch {
     return [];

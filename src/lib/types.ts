@@ -33,104 +33,40 @@ export const COMPONENT_REGISTRY: ComponentInfo[] = [
 export interface DataSourceField {
   key: string;
   label: string;
-  type: "string" | "number";
+  type: "string" | "number" | "date";
 }
 
-export interface DataSourceInfo {
+export type DataSourceType = "table" | "query" | "procedure" | "external" | "sample";
+
+export interface DataSourceConfig {
   id: string;
-  label: string;
-  /** 이 데이터소스를 사용할 수 있는 컴포넌트 종류 */
+  name: string;
+  description: string;
+  type: DataSourceType;
+
+  // table
+  tableName?: string;
+  // query
+  sqlQuery?: string;
+  // procedure
+  procedureName?: string;
+  procedureParams?: { name: string; type: string; defaultValue?: string }[];
+  // external
+  externalUrl?: string;
+  externalMethod?: "GET" | "POST";
+  externalHeaders?: string;  // JSON string
+  // sample (내장 샘플 데이터)
+  sampleDataKey?: string;
+
+  // 컴포넌트 호환성
   compatibleWith: ("chart" | "pie" | "grid" | "excel-grid")[];
   xAxisKeys: string[];
   valueKeys: string[];
   fields: DataSourceField[];
-}
 
-export const DATA_SOURCES: DataSourceInfo[] = [
-  {
-    id: "monthly-sales",
-    label: "월별 매출 데이터",
-    compatibleWith: ["chart"],
-    xAxisKeys: ["month"],
-    valueKeys: ["sales", "target", "profit"],
-    fields: [
-      { key: "month", label: "월", type: "string" },
-      { key: "sales", label: "매출", type: "number" },
-      { key: "target", label: "목표", type: "number" },
-      { key: "profit", label: "이익", type: "number" },
-    ],
-  },
-  {
-    id: "category",
-    label: "카테고리별 데이터",
-    compatibleWith: ["pie"],
-    xAxisKeys: ["name"],
-    valueKeys: ["value"],
-    fields: [
-      { key: "name", label: "카테고리명", type: "string" },
-      { key: "value", label: "값", type: "number" },
-    ],
-  },
-  {
-    id: "weekly-visitors",
-    label: "주간 방문자 데이터",
-    compatibleWith: ["chart"],
-    xAxisKeys: ["day"],
-    valueKeys: ["visitors", "pageViews"],
-    fields: [
-      { key: "day", label: "요일", type: "string" },
-      { key: "visitors", label: "방문자", type: "number" },
-      { key: "pageViews", label: "페이지뷰", type: "number" },
-    ],
-  },
-  {
-    id: "employee",
-    label: "직원 데이터",
-    compatibleWith: ["grid"],
-    xAxisKeys: [],
-    valueKeys: [],
-    fields: [
-      { key: "id", label: "ID", type: "number" },
-      { key: "name", label: "이름", type: "string" },
-      { key: "department", label: "부서", type: "string" },
-      { key: "position", label: "직책", type: "string" },
-      { key: "salary", label: "연봉(만원)", type: "number" },
-      { key: "status", label: "상태", type: "string" },
-    ],
-  },
-  {
-    id: "product",
-    label: "제품 데이터",
-    compatibleWith: ["grid"],
-    xAxisKeys: [],
-    valueKeys: [],
-    fields: [
-      { key: "id", label: "ID", type: "number" },
-      { key: "name", label: "제품명", type: "string" },
-      { key: "category", label: "카테고리", type: "string" },
-      { key: "price", label: "가격", type: "number" },
-      { key: "stock", label: "재고", type: "number" },
-      { key: "rating", label: "평점", type: "number" },
-      { key: "status", label: "상태", type: "string" },
-    ],
-  },
-  {
-    id: "sales-quarterly",
-    label: "분기별 매출 데이터",
-    compatibleWith: ["excel-grid"],
-    xAxisKeys: [],
-    valueKeys: [],
-    fields: [
-      { key: "region", label: "지역", type: "string" },
-      { key: "product", label: "제품", type: "string" },
-      { key: "q1", label: "1분기", type: "number" },
-      { key: "q2", label: "2분기", type: "number" },
-      { key: "q3", label: "3분기", type: "number" },
-      { key: "q4", label: "4분기", type: "number" },
-      { key: "total", label: "합계", type: "number" },
-    ],
-  },
-];
+  createdAt: string;
+  updatedAt: string;
+}
 
 // ── 차트 시리즈 설정 ──
 
@@ -155,7 +91,7 @@ export interface FilterItemConfig {
 // ── 컴포넌트별 속성 ──
 
 export interface ChartProps {
-  dataSource?: string;          // DATA_SOURCES id
+  dataSource?: string;
   xAxisKey?: string;
   series?: ChartSeriesConfig[];
   showLegend?: boolean;
@@ -166,7 +102,7 @@ export interface PieChartProps {
   dataSource?: string;
   showLegend?: boolean;
   innerRadius?: number;
-  colors?: string[];           // 각 항목의 색상 오버라이드
+  colors?: string[];
 }
 
 export interface GridProps {
@@ -193,25 +129,10 @@ export interface LayoutItem {
   width: number;  // column span (1-12)
   height: number; // row span
   title: string;
-  props?: Record<string, unknown>;  // 컴포넌트별 속성 (ChartProps | PieChartProps | GridProps 등)
+  props?: Record<string, unknown>;
 }
 
-// ── 기본 제공 샘플 페이지 ──
-
-export interface SamplePageInfo {
-  id: string;
-  name: string;
-  description: string;
-  href: string;
-  icon: string;
-}
-
-export const SAMPLE_PAGES: SamplePageInfo[] = [
-  { id: "sample-dashboard", name: "대시보드", description: "메인 대시보드 화면", href: "/", icon: "🏠" },
-  { id: "sample-charts", name: "차트 샘플", description: "다양한 차트 컴포넌트 데모", href: "/sample/charts", icon: "📊" },
-  { id: "sample-grid", name: "그리드 샘플", description: "데이터 그리드 컴포넌트 데모", href: "/sample/grid", icon: "📋" },
-  { id: "sample-excel", name: "엑셀 연동 그리드", description: "엑셀 복사/붙여넣기 지원 그리드", href: "/sample/excel-grid", icon: "📑" },
-];
+// ── 메뉴 ──
 
 export type MenuType = "folder" | "menu";
 
@@ -224,6 +145,7 @@ export interface MenuConfig {
   parentId: string | null;   // null = 최상위, 값 있으면 하위 메뉴
   released: boolean;         // true = 사용자 화면에 노출
   layout: LayoutItem[];
+  href?: string;             // 전용 라우트가 있는 메뉴 (샘플 페이지 등)
   createdAt: string;
   updatedAt: string;
   children?: MenuConfig[];   // 프론트엔드 트리 구성용 (DB에는 없음)

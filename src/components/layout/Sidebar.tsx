@@ -3,22 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
-import { loadMenus } from "@/lib/menu-store";
+import { loadMenus, seedSampleMenus } from "@/lib/menu-store";
 import { buildMenuTree } from "@/lib/types";
 import type { MenuConfig } from "@/lib/types";
-
-const staticNavItems = [
-  { href: "/", label: "대시보드" },
-  { href: "/sample/charts", label: "차트 샘플" },
-  { href: "/sample/grid", label: "그리드 샘플" },
-  { href: "/sample/excel-grid", label: "엑셀 연동 그리드" },
-];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [releasedTree, setReleasedTree] = useState<MenuConfig[]>([]);
 
   const fetchMenus = useCallback(async () => {
+    seedSampleMenus();
     const all = await loadMenus();
     const released = all.filter((m) => m.released);
     setReleasedTree(buildMenuTree(released));
@@ -28,7 +22,6 @@ export default function Sidebar() {
     fetchMenus();
   }, [fetchMenus]);
 
-  // pathname이 바뀔 때마다 메뉴 새로고침 (릴리즈 상태 반영)
   useEffect(() => {
     fetchMenus();
   }, [pathname, fetchMenus]);
@@ -40,33 +33,14 @@ export default function Sidebar() {
         <p className="mt-1 text-xs text-gray-500">Chart & Grid Demo</p>
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        {staticNavItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`mb-1 block rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-              }`}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-
-        {/* 릴리즈된 메뉴 */}
-        {releasedTree.length > 0 && (
-          <>
-            <div className="mt-4 mb-2 px-4 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-              메뉴
-            </div>
-            {releasedTree.map((node) => (
-              <SidebarMenuNode key={node.id} menu={node} pathname={pathname} depth={0} />
-            ))}
-          </>
+        {releasedTree.length > 0 ? (
+          releasedTree.map((node) => (
+            <SidebarMenuNode key={node.id} menu={node} pathname={pathname} depth={0} />
+          ))
+        ) : (
+          <p className="px-4 py-2 text-xs text-gray-400">
+            릴리즈된 메뉴가 없습니다.
+          </p>
         )}
       </nav>
       <div className="border-t border-gray-200 px-3 py-4">
@@ -93,7 +67,7 @@ function SidebarMenuNode({
   const [expanded, setExpanded] = useState(true);
   const isFolder = menu.menuType === "folder";
   const hasChildren = menu.children && menu.children.length > 0;
-  const href = `/view/${menu.id}`;
+  const href = menu.href || `/view/${menu.id}`;
   const isActive = pathname === href;
 
   if (isFolder) {

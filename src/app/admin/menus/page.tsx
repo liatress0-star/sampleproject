@@ -9,7 +9,7 @@ import {
   updateMenu,
 } from "@/lib/menu-store";
 import type { MenuConfig, MenuType } from "@/lib/types";
-import { buildMenuTree, SAMPLE_PAGES } from "@/lib/types";
+import { buildMenuTree } from "@/lib/types";
 
 export default function MenuListPage() {
   const { menus, refresh } = useMenus();
@@ -20,7 +20,6 @@ export default function MenuListPage() {
   const [menuType, setMenuType] = useState<MenuType>("menu");
   const [parentId, setParentId] = useState<string | null>(null);
 
-  // 폴더 목록 (상위 메뉴 선택용)
   const folders = menus.filter((m) => m.menuType === "folder");
   const tree = buildMenuTree(menus);
 
@@ -148,14 +147,7 @@ export default function MenuListPage() {
                       : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                   }`}
                 >
-                  <input
-                    type="radio"
-                    name="menuType"
-                    value="folder"
-                    checked={menuType === "folder"}
-                    onChange={() => setMenuType("folder")}
-                    className="hidden"
-                  />
+                  <input type="radio" name="menuType" value="folder" checked={menuType === "folder"} onChange={() => setMenuType("folder")} className="hidden" />
                   <span className="text-base">&#128193;</span>
                   <div>
                     <div className="font-medium">폴더</div>
@@ -169,14 +161,7 @@ export default function MenuListPage() {
                       : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                   }`}
                 >
-                  <input
-                    type="radio"
-                    name="menuType"
-                    value="menu"
-                    checked={menuType === "menu"}
-                    onChange={() => setMenuType("menu")}
-                    className="hidden"
-                  />
+                  <input type="radio" name="menuType" value="menu" checked={menuType === "menu"} onChange={() => setMenuType("menu")} className="hidden" />
                   <span className="text-base">&#128196;</span>
                   <div>
                     <div className="font-medium">메뉴</div>
@@ -186,9 +171,7 @@ export default function MenuListPage() {
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                상위 메뉴
-              </label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">상위 메뉴</label>
               <select
                 value={parentId || ""}
                 onChange={(e) => setParentId(e.target.value || null)}
@@ -198,66 +181,22 @@ export default function MenuListPage() {
                 {folders
                   .filter((f) => f.id !== editingMenu?.id)
                   .map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
+                    <option key={f.id} value={f.id}>{f.name}</option>
                   ))}
               </select>
-              <p className="mt-1 text-xs text-gray-400">
-                폴더 타입의 메뉴만 상위로 선택할 수 있습니다.
-              </p>
+              <p className="mt-1 text-xs text-gray-400">폴더 타입의 메뉴만 상위로 선택할 수 있습니다.</p>
             </div>
           </div>
           <div className="mt-4 flex gap-2">
-            <button
-              type="submit"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
+            <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
               {editingMenu ? "수정" : "등록"}
             </button>
-            <button
-              type="button"
-              onClick={resetForm}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
-            >
+            <button type="button" onClick={resetForm} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
               취소
             </button>
           </div>
         </form>
       )}
-
-      {/* 기본 제공 샘플 페이지 */}
-      <div className="mt-6">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700">
-          <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">
-            기본 제공
-          </span>
-          샘플 페이지
-        </h3>
-        <div className="grid grid-cols-2 gap-3">
-          {SAMPLE_PAGES.map((page) => (
-            <div
-              key={page.id}
-              className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{page.icon}</span>
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900">{page.name}</h4>
-                  <p className="text-xs text-gray-500">{page.description}</p>
-                </div>
-              </div>
-              <Link
-                href={page.href}
-                className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100"
-                target="_blank"
-              >
-                열기
-              </Link>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* 메뉴 트리 목록 */}
       <div className="mt-6 space-y-2">
@@ -286,21 +225,16 @@ export default function MenuListPage() {
 }
 
 function MenuTreeItem({
-  menu,
-  depth,
-  onEdit,
-  onDelete,
-  onToggleRelease,
+  menu, depth, onEdit, onDelete, onToggleRelease,
 }: {
-  menu: MenuConfig;
-  depth: number;
-  onEdit: (m: MenuConfig) => void;
-  onDelete: (id: string, name: string) => void;
+  menu: MenuConfig; depth: number;
+  onEdit: (m: MenuConfig) => void; onDelete: (id: string, name: string) => void;
   onToggleRelease: (m: MenuConfig) => void;
 }) {
   const [expanded, setExpanded] = useState(true);
   const hasChildren = menu.children && menu.children.length > 0;
   const isFolder = menu.menuType === "folder";
+  const hasDedicatedPage = !!menu.href;
 
   return (
     <div style={{ marginLeft: depth * 24 }}>
@@ -311,20 +245,9 @@ function MenuTreeItem({
       >
         <div className="flex flex-1 items-center gap-3">
           {isFolder ? (
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-gray-100"
-            >
-              <svg
-                className={`h-4 w-4 transition-transform ${expanded ? "rotate-90" : ""}`}
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                  clipRule="evenodd"
-                />
+            <button onClick={() => setExpanded(!expanded)} className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-gray-100">
+              <svg className={`h-4 w-4 transition-transform ${expanded ? "rotate-90" : ""}`} fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
               </svg>
             </button>
           ) : (
@@ -334,21 +257,19 @@ function MenuTreeItem({
               </svg>
             </span>
           )}
-
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
                 {isFolder ? "폴더" : "메뉴"}
               </span>
+              {hasDedicatedPage && (
+                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-600">샘플</span>
+              )}
               <h3 className="text-sm font-semibold text-gray-900">{menu.name}</h3>
               {menu.released ? (
-                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                  릴리즈됨
-                </span>
+                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">릴리즈됨</span>
               ) : (
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-400">
-                  미릴리즈
-                </span>
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-400">미릴리즈</span>
               )}
               {!isFolder && menu.layout.length > 0 && (
                 <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-600">
@@ -356,9 +277,7 @@ function MenuTreeItem({
                 </span>
               )}
             </div>
-            {menu.description && (
-              <p className="mt-0.5 text-xs text-gray-500">{menu.description}</p>
-            )}
+            {menu.description && <p className="mt-0.5 text-xs text-gray-500">{menu.description}</p>}
           </div>
         </div>
 
@@ -375,50 +294,32 @@ function MenuTreeItem({
           </button>
 
           {!isFolder && (
-            <Link
-              href={`/admin/menus/${menu.id}`}
-              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700"
-            >
+            <Link href={`/admin/menus/${menu.id}`} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">
               레이아웃 편집
             </Link>
           )}
 
-          {!isFolder && menu.layout.length > 0 && (
-            <Link
-              href={`/view/${menu.id}`}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
-              target="_blank"
-            >
+          {hasDedicatedPage && (
+            <Link href={menu.href!} className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100" target="_blank">
+              페이지 열기
+            </Link>
+          )}
+
+          {!isFolder && !hasDedicatedPage && menu.layout.length > 0 && (
+            <Link href={`/view/${menu.id}`} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50" target="_blank">
               미리보기
             </Link>
           )}
 
-          <button
-            onClick={() => onEdit(menu)}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
-          >
-            수정
-          </button>
-          <button
-            onClick={() => onDelete(menu.id, menu.name)}
-            className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
-          >
-            삭제
-          </button>
+          <button onClick={() => onEdit(menu)} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50">수정</button>
+          <button onClick={() => onDelete(menu.id, menu.name)} className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">삭제</button>
         </div>
       </div>
 
       {isFolder && expanded && hasChildren && (
         <div className="mt-1 space-y-1">
           {menu.children!.map((child) => (
-            <MenuTreeItem
-              key={child.id}
-              menu={child}
-              depth={depth + 1}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onToggleRelease={onToggleRelease}
-            />
+            <MenuTreeItem key={child.id} menu={child} depth={depth + 1} onEdit={onEdit} onDelete={onDelete} onToggleRelease={onToggleRelease} />
           ))}
         </div>
       )}
